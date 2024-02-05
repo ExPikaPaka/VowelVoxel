@@ -1,10 +1,9 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
-#include "../3dparty/stb_image/stb_image.h"
+#include "3dparty/stb_image/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "../3dparty/stb_image/stb_image_write.h"
-#include <Logger.h>
+#include "Logger\Logger.h"
 #include "UI/GameWindow.h"
 #include "UI/IMGUI_UI.h"
 #include "Render/Shader.h"

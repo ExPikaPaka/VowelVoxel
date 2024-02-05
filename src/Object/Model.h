@@ -7,7 +7,7 @@
 #include "../Algorithm/Ray.h"
 #include "Mesh.h"
 
-#include <Logger.h>
+
 
 namespace ent {
 	namespace model {

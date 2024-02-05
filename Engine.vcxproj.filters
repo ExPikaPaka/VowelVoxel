@@ -27,9 +27,6 @@
     <ClCompile Include="src\3dparty\glad.c">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
-    <ClCompile Include="src\Object\VoxReader.cpp">
-      <Filter>Исходные файлы</Filter>
-    </ClCompile>
     <ClCompile Include="src\3dparty\imgui\imgui.cpp">
       <Filter>Исходные файлы</Filter>
     </ClCompile>
@@ -114,9 +111,6 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\dataTypes.h">
-      <Filter>Файлы заголовков</Filter>
-    </ClInclude>
-    <ClInclude Include="src\Object\VoxReader.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\3dparty\imgui\imgui.h">
@@ -210,6 +204,9 @@
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
     <ClInclude Include="src\Utility\Timer.h">
+      <Filter>Файлы заголовков</Filter>
+    </ClInclude>
+    <ClInclude Include="src\3dparty\stb_image\stb_image_write.h">
       <Filter>Файлы заголовков</Filter>
     </ClInclude>
   </ItemGroup>

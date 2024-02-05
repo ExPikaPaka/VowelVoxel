@@ -9,7 +9,7 @@
 
 #include <map>
 
-#include <Logger.h>
+#include "..\Logger\Logger.h"
 #include "..\dataTypes.h"
 #include "..\Render\Shader.h"
 

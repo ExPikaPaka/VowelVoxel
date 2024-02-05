@@ -1,5 +1,5 @@
 #pragma once
-#include <Logger.h>
+#include "..\Logger\Logger.h"
 #include "..\dataTypes.h"
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
