@@ -10,22 +10,28 @@ namespace ent {
 	namespace util {
 		class ThreadPool {
 		public:
+			ThreadPool();
 			ThreadPool(ui32 numThreads);
 
 			~ThreadPool();
 
+			void initThreads(ui32 numThreads);
+
 			template<class T>
 			void enqueue(T&& f);
+
+			void pause();
+			void resume();
 
 			void wait();
 			std::deque<std::function<void()>> tasks;
 		private:
-			void initThreads(ui32 numThreads);
 			std::vector<std::thread> threads;
 
 			std::mutex queueMutex;
 			std::condition_variable condition;
 
+			volatile bool mPause;
 			bool stop;
 		};
 
