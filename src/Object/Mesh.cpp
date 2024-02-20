@@ -10,10 +10,12 @@ namespace ent {
 			this->indices = indices;
 			this->textures = textures;
 
-			position = { 0,0,0 };
+			VAO = 0;
+			VBO = 0;
+			EBO = 0;
+			position = { 0, 0, 0 };
 			usePosition = false;
-
-			setupMesh();
+			readyToDraw = false;
 		}
 
 		Mesh::Mesh(const Mesh& other) {
@@ -21,10 +23,12 @@ namespace ent {
 			indices = other.indices;
 			textures = other.textures;
 
+			VAO = 0;
+			VBO = 0;
+			EBO = 0;
 			position = other.position;
 			usePosition = other.usePosition;
-
-			setupMesh();
+			readyToDraw = false;
 		}
 
 		Mesh::Mesh(Mesh&& other) {
@@ -32,10 +36,12 @@ namespace ent {
 			indices = other.indices;
 			textures = other.textures;
 
+			VAO = 0;
+			VBO = 0;
+			EBO = 0;
 			position = other.position;
 			usePosition = other.usePosition;
-
-			setupMesh();
+			readyToDraw = false;
 		}
 
 		Mesh::Mesh() {
@@ -44,6 +50,7 @@ namespace ent {
 			EBO = 0;
 			position = { 0, 0, 0 };
 			usePosition = false;
+			readyToDraw = false;
 		}
 
 		Mesh::~Mesh() {
@@ -53,7 +60,7 @@ namespace ent {
 
 		void Mesh::draw(render::Shader& shader, ui32 mode) {
 			// Check if Mesh exists
-			if (VAO) {
+			if (VAO && readyToDraw) {
 				// Apply textures
 				unsigned int diffuseNr = 1;
 				unsigned int specularNr = 1;
@@ -96,6 +103,10 @@ namespace ent {
 			}
 		}
 
+		bool Mesh::ready() {
+			return readyToDraw;
+		}
+
 		void Mesh::setPosition(f32v3 position) {
 			this->position = position;
 			usePosition = true;
@@ -133,7 +144,11 @@ namespace ent {
 			indices = other.indices;
 			textures = other.textures;
 
-			setupMesh();
+			VAO = 0;
+			VBO = 0;
+			EBO = 0;
+			position = other.position;
+			usePosition = other.usePosition;
 
 			return *this;
 		}
@@ -146,37 +161,81 @@ namespace ent {
 			indices = other.indices;
 			textures = other.textures;
 
-			setupMesh();
+			VAO = 0;
+			VBO = 0;
+			EBO = 0;
+			position = other.position;
+			usePosition = other.usePosition;
 
 			return *this;
 		}
 
+		void Mesh::setupTexture() {
+			for (ui32 i = 0; i < textures.size(); i++) {
+				if (!textures[i].id && textures[i].texImg) { // If texture is not configured & texture image provided
+
+					ui32 textureID;
+					glGenTextures(1, &textureID);
+
+					glBindTexture(GL_TEXTURE_2D, textureID);
+					glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, textures[i].w, textures[i].h, 0, GL_RGB, GL_UNSIGNED_BYTE, textures[i].texImg);
+
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+					glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+
+					textures[i].id = textureID;
+					delete[] textures[i].texImg;
+
+
+					// Check for OpenGL errors
+					GLenum error = glGetError();
+					if (error != GL_NO_ERROR) {
+						// Handle error: OpenGL error occurred
+						// Print error message or log it
+						// You might need to debug further to identify the cause of the error
+						std::cout << "GL_ERROR (Mesh) error: " << error << "\n";
+ 
+					}
+				}
+			}
+		}
+
 		void Mesh::setupMesh() {
-			if (vertices.size()) {
-				glGenVertexArrays(1, &VAO);
+			if (!readyToDraw) {
+				if (vertices.size() && !VAO) {
+					setupTexture();
 
-				glGenBuffers(1, &VBO);
-				glGenBuffers(1, &EBO);
+					glGenVertexArrays(1, &VAO);
 
-				glBindVertexArray(VAO);
+					glGenBuffers(1, &VBO);
+					glGenBuffers(1, &EBO);
 
-				glBindBuffer(GL_ARRAY_BUFFER, VBO);
-				glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
+					glBindVertexArray(VAO);
 
-				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(ui32), &indices[0], GL_STATIC_DRAW);
+					glBindBuffer(GL_ARRAY_BUFFER, VBO);
+					glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(Vertex), &vertices[0], GL_STATIC_DRAW);
 
-				// Position bind
-				glEnableVertexAttribArray(0);
-				glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(0));
-				// Normal bind
-				glEnableVertexAttribArray(1);
-				glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
-				// TexCoord bind
-				glEnableVertexAttribArray(2);
-				glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
+					glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+					glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(ui32), &indices[0], GL_STATIC_DRAW);
 
-				glBindVertexArray(0);
+					// Position bind
+					glEnableVertexAttribArray(0);
+					glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)(0));
+					// Normal bind
+					glEnableVertexAttribArray(1);
+					glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+					// TexCoord bind
+					glEnableVertexAttribArray(2);
+					glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
+
+					glBindVertexArray(0);
+
+					readyToDraw = true;
+				}
 			}
 		}
 	}

@@ -15,9 +15,12 @@ namespace ent {
 
 		// Texture structure
 		struct Texture {
-			ui32 id;
+			ui32 id = 0;
 			std::string type;
 			std::string path;
+			ui8* texImg = 0;
+			ui32 w = 0;
+			ui32 h = 0;
 		};
 
 		// Single Mesh class
@@ -36,7 +39,7 @@ namespace ent {
 			~Mesh();
 			void setupMesh();
 			void draw(render::Shader& shader, ui32 mode = GL_TRIANGLES);
-
+			bool ready();
 			void setPosition(f32v3 position);
 
 			void clear();
@@ -46,7 +49,10 @@ namespace ent {
 
 			Mesh& operator=(Mesh& other);
 			Mesh& operator=(Mesh&& other);
+
 		private:
+			void setupTexture();
+			bool readyToDraw;
 			unsigned int VAO, VBO, EBO;
 		};
 	}
