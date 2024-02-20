@@ -53,6 +53,7 @@ namespace ent {
 			glClearColor(0.176, 0.176, 0.176, 0.0);
 			glClearColor(0.7, 0.7, 0.7, 0.0);
 			glClearColor(0.1, 0.1, 0.1, 0.0);
+			glClearColor(0.5, 0.66, 0.98, 0.0);
 			glClearDepth(1);
 
 			// Initialize frame buffer
