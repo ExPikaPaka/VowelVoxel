@@ -7,8 +7,8 @@ namespace ent {
             unsigned int numCores = std::thread::hardware_concurrency();
             std::cout << numCores << "\n";
 
-            if (numCores > 2) {
-                pool.initThreads(numCores - 2);
+            if (numCores > 4) {
+                pool.initThreads(numCores - 4);
             } else {
                 pool.initThreads(1);
             }
