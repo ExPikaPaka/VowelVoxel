@@ -3,6 +3,7 @@
 
 #include "3dparty/stb_image/stb_image.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "3dparty/stb_image/stb_image_write.h"
 #include "Logger\Logger.h"
 #include "UI/GameWindow.h"
 #include "UI/IMGUI_UI.h"
@@ -23,6 +24,8 @@
 #include "World/World.h"
 #include <future>
 #include "Utility/Timer.h"
+#include "Utility/ThreadPool.h"
+#include "Algorithm/PerlinNoise.h"
 
 
 void keyboardUpdate(GLFWwindow* window, ent::render::Camera& camera);
@@ -33,6 +36,33 @@ void viewFrameUpdate(GLFWwindow* window);
 
 
 int main() {
+    ent::algorithm::PerlinNoise noise(2.2, 0.1, 2.0, 0.2);
+
+    const int dim = 256;
+    ui8 img[dim][dim][3];
+
+    for (i32 y = 0; y < dim; y++) {
+        for (i32 x = 0; x < dim; x++) {
+            f32 xF = (float)x / (float)dim;
+            f32 yF = (float)y / (float)dim;
+
+            f32 v = noise.fractal(4,xF, yF) + 1;
+            v *= 0.5;
+            v *= 255;
+            v = (ui8)v;
+
+            v = v > 120 ? v < 180 ? 255 : 0 : 0;
+
+            img[y][x][0] = v;
+            img[y][x][1] = v;
+            img[y][x][2] = v;
+        }
+    }
+
+    stbi_write_bmp("noise.bmp", dim, dim, 3, img);
+    //system("start noise.bmp");
+
+    //return 0;
     /* ------------------------------ Logger initialization ------------------------------ */
     ent::util::Logger* logger = logger->getInstance();
     logger->setLogLevel(ent::util::level::DEBUG);
@@ -45,6 +75,7 @@ int main() {
     ent::ui::GameWindow window;
     window.setWindowSize(1920, 1000);
     window.init();
+    window.setSwapInterval(ent::ui::GameSwapInterval::LOW_SYNC);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -84,14 +115,16 @@ int main() {
     object.setTextureFilter(GL_LINEAR);
     glEnable(GL_DEPTH_TEST);
         
-    ent::model::Model arrow = ent::generation::genArrow({ -1,  -1,  3.5}, { -1, -1, 4.5 }, 6, 0.1, 0.1);
-    ent::model::Mesh light = ent::generation::genCylinder({ -1,  -1,  3.5 }, { -1, -1, 4.5 }, 6, 0.5, true);
+    f32v3 lightPos(0);
+    lightPos.z = 8;
+    lightPos.x = 18;
+    lightPos.y = 22;
+
+    ent::model::Model arrow = ent::generation::genArrow({ -1,  -3,  8.5}, { -1, -3, 9.5 }, 6, 0.1, 0.1);
+    ent::model::Mesh light = ent::generation::genCylinder(lightPos + f32v3(0,0, -0.5), lightPos + f32v3(0, 0, 0.5), 6, 0.5, true);
 
     std::vector<ent::model::Model> arrows;
-    f32v3 lightPos(0);
-    lightPos.z = 4;
-    lightPos.x = 4;
-    lightPos.y = -9;
+
 
     /* ------------------------------ Camera initialization ------------------------------ */
     f32m4 view = f32m4(0);
@@ -100,6 +133,7 @@ int main() {
     ent::render::Camera camera;
     camera.speed = 2.0;
     camera.fov = 90;
+    camera.alignment = ent::render::Camera_Alignment::AXIS;
 
     bool hideMouse = false;
     
@@ -120,19 +154,20 @@ int main() {
 
 
 
-    ent::world::SVO<ent::world::Voxel> world(7);
+    ent::world::SVO<ent::world::Voxel> world(5);
 
     ent::world::Voxel simple_voxel;
     simple_voxel.id = 0;
-    simple_voxel.color = { 255, 100, 0 };
+    simple_voxel.color = { 255, 50, 0 };
+
 
     // Loading from bmp file
     int w, h, c;
     int voxCount = 0;
-    for (ui32 layers = 0; layers < 1; layers++) {
+    for (ui32 layers = 0; layers < 19; layers++) {
         std::string filename = "assets/SVO_demo/shape4/layer-" + std::to_string(layers) + ".bmp";
         //std::string filename = "assets/SVO_demo/test_3-" + std::to_string(layers) + ".bmp";
-        filename = "assets/SVO_demo/depth-7-test.bmp";
+       // filename = "assets/SVO_demo/depth-7-test.bmp";
 
         std::cout << "Loading file \"" << filename << "\"\n";
 
@@ -162,7 +197,9 @@ int main() {
                         b = array[cID + 2];
 
                         cID += 3;
-                        simple_voxel.color = { r, g, b };
+                        //simple_voxel.color = { r, g, b };
+                        simple_voxel.color.b = z * 13;
+                        simple_voxel.color.r = 255 - z * 10;
 
                         //if (array[i + j * w * 3] != 255 && array[i + j * w * 3 + 1] != 0) {
                             world.set({ x, y, z }, simple_voxel);
@@ -179,14 +216,31 @@ int main() {
         }
     }
 
-    for (ui32 z = 0; z < 10; z++) {
-        for (ui32 y = 0; y < 10; y++) {
-            for (ui32 x = 0; x < 10; x++) {
-                simple_voxel.color.r = (f32)x * 28.41;
-                simple_voxel.color.g = (f32)y * 28.41;
-                simple_voxel.color.b = (f32)z * 28.41;
 
-                //world.set({ x, y, z }, simple_voxel);
+    simple_voxel.color = { 123,123,123 };
+    f32 dim2 = 24;
+    for (ui32 z = 0; z < 32; z++) {
+        for (ui32 y = 0; y < 32; y++) {
+            for (ui32 x = 0; x < 32; x++) {
+                //simple_voxel.color.r = (f32)x * 28.41;
+                //simple_voxel.color.g = (f32)y * 28.41;
+                //simple_voxel.color.b = (f32)z * 28.41;
+
+                f32 xF = (float)x / (float)dim2;
+                f32 yF = (float)y / (float)dim2;
+                f32 zF = (float)z / (float)dim2;
+
+                f32 v = noise.fractal(4, xF, yF, zF) + 1;
+                v *= 0.5;
+                v *= 255;
+                v = (ui8)v;
+
+                v = v > 120 ? v < 180 ? 255 : 0 : 0;
+
+                if (v) {
+
+                    //world.set({ x, y, z }, simple_voxel);
+                }
             }
         }
     }
@@ -205,7 +259,7 @@ int main() {
     auto start_time = std::chrono::high_resolution_clock::now();
 
     for (ui32 i = 0; i < 1; i++) {
-        worldModelMesh = converter.convert(world, 7);
+        worldModelMesh = converter.convert(world, 5);
     }
     auto end_time = std::chrono::high_resolution_clock::now();
 
@@ -216,8 +270,6 @@ int main() {
     std::cout << "Conversion time: " << duration << " milliseconds" << std::endl;
     std::cout << "Mesh vertices: " << worldModelMesh.vertices.size()<< "\n";
     std::cout << "Mesh triangles: " << worldModelMesh.indices.size() / 3<< "\n";
-
-
  
     worldModelMesh.setPosition({ 1, 1, 0 });
 
@@ -235,27 +287,26 @@ int main() {
     glLineWidth(2);
 
 
+
+
+
+
     ent::model::Model arr;
 
     ent::world::World lia;
 
-
-    for (ui32 z = 0; z < 1; z++) {
-        for (ui32 y = 0; y < 5; y++) {
-            for (ui32 x = 0; x < 5; x++) {
-                simple_voxel.color.r = (f32)x * 28.41;
-                simple_voxel.color.g = (f32)y * 28.41;
-                simple_voxel.color.b = (f32)z * 28.41;
-
-                //lia.gen({ x, y, z });
-            }
-        }
-    }
-
-
     ent::util::Timer timer;
+    ent::util::Timer timerCamera;
+    ent::util::Timer timerMode;
+    ent::util::Timer timer1;
+    f32 mode = 0;
 
-    while (!glfwWindowShouldClose((GLFWwindow*)window.getHandle())) {
+    light.setupMesh();
+    object.setupMesh();
+    worldModel.setupMesh();
+
+    bool end = false;
+    while (!glfwWindowShouldClose((GLFWwindow*)window.getHandle()) && !end) {
         // Handle events /////////////////////////////////////////////////////////////////////
         glfwPollEvents();
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -264,7 +315,7 @@ int main() {
         // Update ////////////////////////////////////////////////////////////////////////////
         // View update
         viewFrameUpdate((GLFWwindow*)window.getHandle());
-
+        
         // Mouse update
         if (hideMouse) mouseUpdate((GLFWwindow*)window.getHandle(), camera);
 
@@ -278,11 +329,45 @@ int main() {
             hideMouse = false;
         }
 
+
+        if (glfwGetKey((GLFWwindow*)window.getHandle(), GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            end = true;
+        }
+
+
+        if (glfwGetKey((GLFWwindow*)window.getHandle(), GLFW_KEY_Z) == GLFW_PRESS) {
+            if (!timer.active()) {
+                std::vector<ui32v3> val;
+                for (ui32 z = 0; z < 5; z++) {
+                    for (ui32 y = 0; y < 40; y++) {
+                        for (ui32 x = 0; x < 40; x++) {
+                            val.push_back({ x, y, z });
+                        }
+                    }
+                }
+
+               /* std::mt19937 g;
+                std::shuffle(val.begin(), val.end() - 1600 * 4, g);
+                std::shuffle(val.begin() + 1600 * 1, val.end() - 1600 * 3, g);
+                std::shuffle(val.begin() + 1600 * 2, val.end() - 1600 * 2, g);
+                std::shuffle(val.begin() + 1600 * 3, val.end() - 1600 * 1, g);
+                std::shuffle(val.begin() + 1600 * 4, val.end() - 1600 * 0, g);*/
+
+ 
+                
+                for (ui32 i = 0; i < val.size(); i++) {
+                    lia.gen(val[i]);
+                }
+                timer.setTimer(100000);
+            } 
+        }
+       
+
         // Keyboard update
         keyboardUpdate((GLFWwindow*)window.getHandle(), camera);
-
+        
         // Light position update
-        lightPos = f32v3(-1, -1, 4);
+        lightPos = f32v3(8, 18, 22);
         if (glfwGetKey((GLFWwindow*)window.getHandle(), GLFW_KEY_G) == GLFW_PRESS) {
             lightPos = camera.position;
         }
@@ -290,47 +375,43 @@ int main() {
 
         f32 camDist = sqrt(camera.position.x * camera.position.x + camera.position.y * camera.position.y + camera.position.z * camera.position.z);
         
-        f32v3 p = { 1, 1, 0 };
-        p += worldModel.getCenter();
+        f32v3 p = { 20, 20, 0 };
+        //p += worldModel.getCenter();
         //camera.lookAt(p);
 
         if (glfwGetKey((GLFWwindow*)window.getHandle(), GLFW_KEY_X) == GLFW_PRESS) {
-      
-
-            if (!timer.active()) {
-                level--;
-                if (level < 1) level = 1;
-                worldModelMesh = converter.convert(world, level);
-
-                worldModelMesh.setPosition({ 1, 1, 0 });
-
-                worldModel.clear();
-
-                worldModel.addMesh(worldModelMesh);
-                timer.setTimer(1000);
+            if (!timerCamera.active()) {
+                if (camera.alignment == ent::render::Camera_Alignment::AXIS) {
+                    camera.alignment = ent::render::Camera_Alignment::FREECAM;
+                } else {
+                    camera.alignment = ent::render::Camera_Alignment::AXIS;
+                }
+                std::cout << "Switching camera alignment\n";
+                timerCamera.setTimer(200);
             }
         }
 
-        if (glfwGetKey((GLFWwindow*)window.getHandle(), GLFW_KEY_Z) == GLFW_PRESS) {
-            if (!timer.active()) {
-                level++;
-                if (level > 5) level = 5;
-                worldModelMesh = converter.convert(world, level);
+        if (glfwGetKey((GLFWwindow*)window.getHandle(), GLFW_KEY_B) == GLFW_PRESS) {
+            if (!timerMode.active()) {
+                if (mode == 0) {
+                    mode = 1;
+                } else if(mode == 1) {
+                    mode = 4;
+                } else if (mode == 4) {
+                    mode = 0;
+                }
 
-                worldModelMesh.setPosition({ 1, 1, 0 });
-
-                worldModel.clear();
-
-                worldModel.addMesh(worldModelMesh);
-                timer.setTimer(1000);
+                std::cout << "Swithcing light mode\n";
+                timerMode.setTimer(200);
             }
         }
+        if (mode == 4) lightPos = camera.position;
 
         objectShader.use();
         
         model = f32m4(1);
         view = camera.getViewMatrix();
-        projection = glm::perspective(glm::radians(camera.fov), (float)((float)window.getWidth() / (float)window.getHeight()), 0.0001f, 1000000.0f);
+        projection = glm::perspective(glm::radians(camera.fov), (float)((float)window.getWidth() / (float)window.getHeight()), 0.01f, 1000000.0f);
 
         objectShader.use();
         objectShader.setMat4("model", model);
@@ -338,8 +419,9 @@ int main() {
         objectShader.setMat4("projection", projection);
 
 		objectShader.setVec3("material.ambient", 0.3, 0.3, 0.3);
-		objectShader.setVec3("material.diffuse", 0.9, 0.9, 0.9);
-		objectShader.setVec3("material.specular", 0.4, 0.4, 0.4);
+		objectShader.setVec3("material.diffuse", 0.7, 0.7, 0.7);
+		objectShader.setVec3("material.diffuse", 1.3, 1.3, 1.3);
+		objectShader.setVec3("material.specular", 0.2, 0.2, 0.2);
 		objectShader.setFloat("material.shininess", 16);
 		objectShader.setFloat("material.emissivity", 0);
 		objectShader.setInt("lights_count", 1);
@@ -349,15 +431,17 @@ int main() {
 			objectShader.setVec3((std::string("light[" + std::to_string(i)) + std::string("].diffuse")).c_str(), 1.0f, 1.0f, 1.0f);
 			objectShader.setVec3((std::string("light[" + std::to_string(i)) + std::string("].specular")).c_str(), 1.0f, 1.0f, 1.0f);
 			objectShader.setVec3((std::string("light[" + std::to_string(i)) + std::string("].position")).c_str(), lightPos);
-			objectShader.setVec3((std::string("light[" + std::to_string(i)) + std::string("].direction")).c_str(), 0.0f, 1.0f, 0.0f);
-			objectShader.setFloat((std::string("light[" + std::to_string(i)) + std::string("].linear")).c_str(), 0.0f);
+			objectShader.setVec3((std::string("light[" + std::to_string(i)) + std::string("].direction")).c_str(), camera.front);
+			objectShader.setFloat((std::string("light[" + std::to_string(i)) + std::string("].linear")).c_str(), 0.6f);
 			objectShader.setFloat((std::string("light[" + std::to_string(i)) + std::string("].constant")).c_str(), 0.0f);
-			objectShader.setFloat((std::string("light[" + std::to_string(i)) + std::string("].quadratic")).c_str(), 0.0f);
-			objectShader.setInt((std::string("light[" + std::to_string(i)) + std::string("].type")).c_str(), 0.0f);
+			objectShader.setFloat((std::string("light[" + std::to_string(i)) + std::string("].quadratic")).c_str(), 0.001f);
+			objectShader.setInt((std::string("light[" + std::to_string(i)) + std::string("].type")).c_str(), mode);
 			objectShader.setFloat((std::string("light[" + std::to_string(i)) + std::string("].cutoff")).c_str(), cos(glm::radians(50.0f)));
-			objectShader.setFloat((std::string("light[" + std::to_string(i)) + std::string("].outerCutoff")).c_str(), cos(glm::radians(0.0f)));
+			objectShader.setFloat((std::string("light[" + std::to_string(i)) + std::string("].outerCutoff")).c_str(), cos(glm::radians(55.0f)));
 		}
         objectShader.setVec3("viewPos", camera.position);
+
+        lia.draw(objectShader);
 
 
         model = glm::translate(model, { 0.1, 0, 0.1 });
@@ -378,7 +462,7 @@ int main() {
         redShader.setVec3("material.ambient", 0.2, 0.2, 0.2);
         redShader.setVec3("material.diffuse", 0.6, 0.6, 0.6);
         redShader.setVec3("material.specular", 0.2, 0.2, 0.2);
-        redShader.setFloat("material.shininess", 1);
+        redShader.setFloat("material.shininess", 5);
         redShader.setFloat("material.emissivity", 0);
         redShader.setInt("lights_count", 1);
         
@@ -485,17 +569,17 @@ void keyboardUpdate(GLFWwindow* window, ent::render::Camera& camera) {
 
     float deltaTime = now - previous;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.processMovement(ent::render::FORWARD, deltaTime);
+        camera.processMovement(ent::render::Camera_Movement::FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.processMovement(ent::render::BACKWARD, deltaTime);
+        camera.processMovement(ent::render::Camera_Movement::BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.processMovement(ent::render::LEFT, deltaTime);
+        camera.processMovement(ent::render::Camera_Movement::LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.processMovement(ent::render::RIGHT, deltaTime);
+        camera.processMovement(ent::render::Camera_Movement::RIGHT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        camera.processMovement(ent::render::UP, deltaTime);
+        camera.processMovement(ent::render::Camera_Movement::UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        camera.processMovement(ent::render::DOWN, deltaTime);
+        camera.processMovement(ent::render::Camera_Movement::DOWN, deltaTime);
 
     previous = now;
 }

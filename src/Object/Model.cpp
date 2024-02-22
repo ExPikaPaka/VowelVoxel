@@ -74,6 +74,12 @@ namespace ent {
 			}
 		}
 
+		void Model::setupMesh() {
+			for (ui32 i = 0; i < meshes.size(); i++) {
+				meshes[i].setupMesh();
+			}
+		}
+
 		void Model::loadModel(std::string path) {
 			logger->addLog(std::string("Loading object \"") + path + std::string("\""), util::level::DEBUG);
 			Assimp::Importer importer;

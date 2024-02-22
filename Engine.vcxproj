@@ -139,6 +139,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\Algorithm\PerlinNoise.cpp" />
+    <ClCompile Include="src\Utility\ThreadPool.cpp" />
     <ClCompile Include="src\Utility\Timer.cpp" />
     <ClCompile Include="src\World\MeshToSVO.cpp" />
     <ClCompile Include="src\World\Voxel.cpp" />
@@ -170,7 +172,9 @@
     <ClCompile Include="src\World\World.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Algorithm\PerlinNoise.h" />
     <ClInclude Include="src\3dparty\stb_image\stb_image_write.h" />
+    <ClInclude Include="src\Utility\ThreadPool.h" />
     <ClInclude Include="src\Utility\Timer.h" />
     <ClInclude Include="src\World\MeshToSVO.h" />
     <ClInclude Include="src\World\Voxel.h" />

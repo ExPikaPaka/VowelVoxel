@@ -8,13 +8,19 @@
 namespace ent {
 	namespace render {
 		// Defines several possible options for camera movement
-		enum Camera_Movement {
+		enum class Camera_Movement {
 			FORWARD,
 			BACKWARD,
 			LEFT,
 			RIGHT,
 			UP,
 			DOWN
+		};
+
+		// Defines several possible options for camera movement alignment
+		enum class Camera_Alignment {
+			AXIS,
+			FREECAM
 		};
 
 		// Default camera values
@@ -37,6 +43,8 @@ namespace ent {
 			f32 speed;
 			f32 mouseSensitivity;
 			f32 fov;
+
+			Camera_Alignment alignment;
 
 			// Customizable constructor
 			Camera(f32v3 position = f32v3(0.0f), f32v3 front = f32v3(0.0f, 0.0f, -1.0f), f32v3 worldUp = f32v3(0.0f, 0.0f, 1.0f),

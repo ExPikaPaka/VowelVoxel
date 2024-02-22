@@ -25,6 +25,8 @@ namespace ent {
 
 			void setTextureFilter(int filter);
 
+			void setupMesh();
+
 			// Loads texture and returns OpenGL id to the texture
 			static ui32 TextureFromFile(const char* path, const std::string& directory, ui32 filterType);
 

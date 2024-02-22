@@ -74,7 +74,7 @@ namespace ent {
 			void setBordless(bool state);
 			void setResizable(bool state);
 			void setMaxFPS(uint value) { m_displayMode.maxFPS = value; }
-			void setSwapInterval(GameSwapInterval mode) { m_displayMode.swapInterval = mode; }
+			void setSwapInterval(GameSwapInterval mode) { m_displayMode.swapInterval = mode; glfwSwapInterval((i32)mode); }
 			void setTitle(const char title);
 
 		private:

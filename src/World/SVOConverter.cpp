@@ -199,7 +199,7 @@ namespace ent {
 			reMesh();
 
 			ui8* texture = new ui8[rectangles.size() * 3];
-			std::cout << "Rect count " << rectangles.size() << "\n";
+
 			for (ui32 id = 0; id < rectangles.size(); id++) {
 				Rectangle& rect = rectangles.at(id);
 
@@ -299,26 +299,12 @@ namespace ent {
 
 			}
 
-			ui32 textureID;
-			glGenTextures(1, &textureID);
-
-			glBindTexture(GL_TEXTURE_2D, textureID);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, rectangles.size(), 1, 0, GL_RGB, GL_UNSIGNED_BYTE, texture);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 			
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-			
-
-			delete[] texture;
-
-
 			model::Texture tex;
-
-			tex.id = textureID;
+			tex.texImg = texture;
 			tex.type = "diffuse";
+			tex.w = rectangles.size();
+			tex.h = 1;
 
 			textures.push_back(tex);
 
